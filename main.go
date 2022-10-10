@@ -119,3 +119,5 @@ func getUser(db *sql.DB) {
 		fmt.Println(p.id, p.data)
 	}
 }
+
+fmt.Println("testtt")
