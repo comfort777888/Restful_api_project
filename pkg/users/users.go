@@ -1,7 +1,6 @@
 package users
 
 import (
-	"errors"
 	"fmt"
 	"log"
 
@@ -9,8 +8,18 @@ import (
 )
 
 type User struct {
-	ID   int
-	Data string
+	ID   int    `json:"id" db:"id"`
+	Data string `json:"data" db:"data"`
+}
+
+type Store struct {
+	DB *sqlx.DB
+}
+
+func NewStore(db *sqlx.DB) *Store {
+	return &Store{
+		DB: db,
+	}
 }
 
 func NewUser(id int, data string) *User {
@@ -20,8 +29,9 @@ func NewUser(id int, data string) *User {
 	}
 }
 
-func (u *User) Create(db *sqlx.DB) error {
-	_, err := db.NamedExec(`INSERT INTO users (id, data) VALUES (:id, :data)`,
+func (u *User) Create(s *Store) error {
+	sqlStr := "INSERT INTO users (id, data) VALUES (:id, :data)"
+	_, err := s.DB.NamedExec(sqlStr,
 		map[string]interface{}{
 			"id":   u.ID,
 			"data": u.Data,
@@ -29,33 +39,46 @@ func (u *User) Create(db *sqlx.DB) error {
 	return err
 }
 
-func (u *User) Read(db *sqlx.DB) error {
-	place := User{}
-	rows, err := db.Queryx("SELECT * FROM users")
-	if err != nil {
-		log.Printf("err in sel:%v", err)
-	}
-
+func (u *User) Read(s *Store) error {
+	rows, err := s.DB.Queryx("SELECT * FROM users")
 	for rows.Next() {
-		err := rows.StructScan(&place)
+		err := rows.StructScan(&u)
 		if err != nil {
-			log.Fatalln(err)
+			fmt.Printf("scan failed, error:%v\n", err)
+			continue
 		}
-		fmt.Printf("%#v\n", place)
+		fmt.Println(u.ID, u.Data)
 	}
+	return err
+}
 
-	row, err := db.NamedQuery(`SELECT * FROM users WHERE id=:fn`, map[string]interface{}{"fn": u.ID})
-	if err != nil {
-		return err
-	}
-	if !row.Next() {
-		return errors.New("failed to get user by id")
-	}
+func (u *User) Update(s *Store, id int, data string) error {
+	sqlStr := "UPDATE users SET data=:data WHERE id=:id"
+	_, err := s.DB.NamedExec(sqlStr,
+		map[string]interface{}{
+			"id":   id,
+			"data": data,
+		})
+	return err
+}
 
-	err = row.StructScan(&u)
-	if err != nil {
-		return err
-	}
+func (u *User) Delete(s *Store, id int) error {
+	sqlStr := "DELETE FROM users WHERE id =:id"
+	_, err := s.DB.NamedExec(sqlStr,
+		map[string]interface{}{
+			"id": id,
+		})
+	return err
+}
 
-	return nil
+func (u *User) ReadRow(s *Store, id int) error {
+	rows, err := s.DB.NamedQuery(`SELECT * FROM users WHERE id=:fn`, map[string]interface{}{"fn": id})
+	for rows.Next() {
+		err := rows.StructScan(&u)
+		if err != nil {
+			log.Fatalf("error in readrow scanning: %v", err)
+		}
+		fmt.Printf("Row with selected ID: %+v", u)
+	}
+	return err
 }
