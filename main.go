@@ -1,48 +1,21 @@
 package main
 
 import (
-	"cccccccc/pkg/db"
-	"cccccccc/pkg/users"
-	"fmt"
-	"log"
+	"net/http"
+	"rest_api_project/pkg/db"
+	"rest_api_project/web/user"
+
+	"github.com/gorilla/mux"
 )
 
 func main() {
-	s := users.NewStore(db.Newdb())
-	defer s.DB.Close()
 
-	u := users.NewUser(1, "Aray")
-	err := u.Create(s)
-	if err != nil {
-		log.Fatalf("error in creating user %v", err)
-	}
-
-	fmt.Println("До изменения и удаления:")
-
-	err = u.Read(s)
-	if err != nil {
-		log.Fatalf("error in reading User %v", err)
-	}
-
-	err = u.Update(s, 2, "Bill")
-	if err != nil {
-		log.Fatalf("error in updating User %v", err)
-	}
-
-	err = u.Delete(s, 3)
-	if err != nil {
-		log.Fatalf("error in deleting User %v", err)
-	}
-
-	fmt.Println("После изменения и удаления:")
-
-	err = u.Read(s)
-	if err != nil {
-		log.Fatalf("error in reading User after updating and deleting %v", err)
-	}
-
-	err = u.ReadRow(s, 2)
-	if err != nil {
-		log.Fatalf("error in reading selected row %v", err)
-	}
+	defer db.DB.Close()
+	router := mux.NewRouter()
+	router.HandleFunc("/user/{id}", user.CreateUserHandler).Methods(http.MethodPost)
+	router.HandleFunc("/user/{id}", user.GetUserHandlerById).Methods(http.MethodGet)
+	router.HandleFunc("/user/{id}", user.DeleteUserHandler).Methods(http.MethodDelete)
+	router.HandleFunc("/user/{id}", user.UpdateUserHandler).Methods(http.MethodPut)
+	router.HandleFunc("/users", user.GetAllUsersHandler).Methods(http.MethodGet)
+	http.ListenAndServe(":8080", router)
 }
