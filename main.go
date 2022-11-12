@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"net/http"
 	"rest_api_project/pkg/db"
 	"rest_api_project/web/user"
@@ -17,5 +18,6 @@ func main() {
 	router.HandleFunc("/user/{id}", user.DeleteUserHandler).Methods(http.MethodDelete)
 	router.HandleFunc("/user/{id}", user.UpdateUserHandler).Methods(http.MethodPut)
 	router.HandleFunc("/users", user.GetAllUsersHandler).Methods(http.MethodGet)
+	log.Println("connection is on")
 	http.ListenAndServe(":8080", router)
 }
